@@ -2,7 +2,6 @@ import { IsOptional, IsInt, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class SummaryDto {
-  @IsOptional()
   @Type(() => Number)
   @IsInt()
   year?: number;

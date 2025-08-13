@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { Company } from '../company/company.entity';
 
 @Entity()
 export class Target {
@@ -16,6 +23,13 @@ export class Target {
 
   @Column('decimal', { precision: 50, scale: 2 })
   amount: number;
+
+  @ManyToOne(() => Company, (company) => company.targets)
+  @JoinColumn({ name: 'companyId' })
+  company: Company;
+
+  @Column({ nullable: false })
+  companyId: number;
 
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt: Date;

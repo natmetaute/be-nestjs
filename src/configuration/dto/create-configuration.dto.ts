@@ -2,7 +2,7 @@ import { IsInt, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 export class CreateConfigurationDto {
   @IsInt()
-  userId!: number;
+  companyId!: number;
 
   @IsString()
   @IsNotEmpty()

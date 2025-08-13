@@ -4,9 +4,14 @@ import { TransactionsController } from './transactions.controller';
 import { TransactionsService } from './transactions.service';
 import { Transactions } from './transactions.entity';
 import { TargetModule } from '../target/target.module';
+import { CompanyModule } from '../company/company.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Transactions]), TargetModule],
+  imports: [
+    TypeOrmModule.forFeature([Transactions]),
+    TargetModule,
+    CompanyModule,
+  ],
   controllers: [TransactionsController],
   providers: [TransactionsService],
 })

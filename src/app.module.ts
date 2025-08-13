@@ -8,7 +8,10 @@ import { AuditModule } from './audit/audit.module';
 import { ConfigurationModule } from './configuration/configuration.module';
 import { TransactionsModule } from './transactions/transactions.module';
 import { AuditSubscriber } from './audit/audit.subscriber';
+import { CompanyModule } from './company/company.module';
 import { DataSource } from 'typeorm';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -22,11 +25,16 @@ import { DataSource } from 'typeorm';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true, // disable in production
     }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'public'),
+      serveRoot: '/public', 
+    }),
     UsersModule,
     AuthModule,
     AuditModule,
     ConfigurationModule,
     TransactionsModule,
+    CompanyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

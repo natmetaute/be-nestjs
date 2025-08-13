@@ -5,7 +5,7 @@ import {
   Body,
   Param,
   Delete,
-  Put,
+  Query,
   Patch,
   UseGuards,
   Request,
@@ -24,9 +24,27 @@ import { JwtPayload } from '../auth/jwt-payload.interface';
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  @Get()
+  @Get('filter')
+  findAllWithFilters(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('search') search?: string,
+  ) {
+    return this.usersService.findAllWithFilters(
+      Number(page),
+      Number(limit),
+      search,
+    );
+  }
+
+  @Get('all')
   getAll() {
     return this.usersService.findAll();
+  }
+
+  @Get('company/:companyId')
+  async findUsersByCompany(@Param('companyId') companyId: number) {
+    return this.usersService.findAllByCompany(companyId);
   }
 
   @Get(':id')

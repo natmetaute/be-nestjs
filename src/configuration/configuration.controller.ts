@@ -15,30 +15,30 @@ import { Configuration } from './configuration.entity';
 import { UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 
-@Controller('users/:userId/configuration')
+@Controller('companies/:companyId/configuration')
 @UseGuards(AuthGuard('jwt'))
 export class ConfigurationController {
   constructor(private readonly service: ConfigurationService) {}
 
   @Get()
-  get(@Param('userId', ParseIntPipe) userId: number): Promise<Configuration> {
-    return this.service.getByUserId(userId);
+  get(@Param('companyId', ParseIntPipe) companyId: number): Promise<Configuration> {
+    return this.service.getByCompanyId(companyId);
   }
 
   @Post()
   create(
-    @Param('userId', ParseIntPipe) userId: number,
-    @Body() body: Omit<CreateConfigurationDto, 'userId'>,
+    @Param('companyId', ParseIntPipe) companyId: number,
+    @Body() body: Omit<CreateConfigurationDto, 'companyId'>,
   ): Promise<Configuration> {
-    return this.service.create({ userId, ...body });
+    return this.service.create({ companyId, ...body });
   }
 
   @Patch()
   update(
-    @Param('userId', ParseIntPipe) userId: number,
+    @Param('companyId', ParseIntPipe) companyId: number,
     @Body() body: UpdateConfigurationDto,
   ): Promise<Configuration> {
-    return this.service.updateByUserId(userId, body);
+    return this.service.updateByCompanyId(companyId, body);
   }
 
   // Optional convenience: PUT to upsert
@@ -51,7 +51,7 @@ export class ConfigurationController {
   // }
 
   @Delete()
-  remove(@Param('userId', ParseIntPipe) userId: number) {
-    return this.service.deleteByUserId(userId);
+  remove(@Param('companyId', ParseIntPipe) companyId: number) {
+    return this.service.deleteByCompanyId(companyId);
   }
 }

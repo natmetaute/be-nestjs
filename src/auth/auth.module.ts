@@ -8,6 +8,7 @@ import { JwtStrategy } from './jwt.strategy';
 import { jwtConstants } from './constants';
 import { AuditModule } from '../audit/audit.module';
 import { MailModule } from '../mail/mail.module';
+import { CompanyModule } from 'src/company/company.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { MailModule } from '../mail/mail.module';
       signOptions: { expiresIn: '1d' },
     }),
     AuditModule,
+    CompanyModule,
   ],
   providers: [AuthService, JwtStrategy],
   controllers: [AuthController],

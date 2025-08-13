@@ -33,8 +33,13 @@ export class TargetService {
     await this.repo.delete(id);
   }
 
-  async getTargetsForYear(year: number): Promise<Target[]> {
-    return this.repo.find({ where: { year } });
+  async getTargetsForYear(year: number, companyId: number): Promise<Target[]> {
+    return this.repo.find({
+      where: {
+        year,
+        companyId,
+      },
+    });
   }
 
   async getTargetForPeriod(

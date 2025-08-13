@@ -4,6 +4,7 @@ import {
   MinLength,
   MaxLength,
   IsEnum,
+  IsNumber,
 } from 'class-validator';
 import { UserRole, UserStatus } from '../user.entity';
 
@@ -20,6 +21,9 @@ export class CreateUserDto {
   @MinLength(2)
   @MaxLength(50)
   lastName!: string;
+
+  @IsNumber()
+  companyId: number;
 
   @IsString()
   @MinLength(6)

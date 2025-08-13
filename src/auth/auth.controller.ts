@@ -29,7 +29,10 @@ export class AuthController {
     @Ip() ip: string,
     @Headers('user-agent') ua: string,
   ) {
-    const user = await this.authService.validateUser(email, password);
+    const user = await this.authService.validateUser(
+      email,
+      password
+    );
     if (!user) {
       await this.auditService.log({
         action: AuditAction.AUTH_LOGIN_FAILED,
@@ -53,6 +56,7 @@ export class AuthController {
       id: user.id,
       email: user.email,
       role: user.role,
+      companyId: user.companyId,
     });
   }
 
@@ -93,6 +97,7 @@ export class AuthController {
       id: user.id,
       email: user.email,
       role: user.role,
+      companyId: user.companyId,
     });
   }
 }

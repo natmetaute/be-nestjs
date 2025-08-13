@@ -17,4 +17,9 @@ export class SignupDto {
   @MinLength(2)
   @MaxLength(50)
   lastName!: string;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(50)
+  companyName: string;
 }

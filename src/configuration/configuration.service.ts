@@ -17,8 +17,7 @@ export class ConfigurationService {
   ) {}
 
   async create(dto: CreateConfigurationDto): Promise<Configuration> {
-    // Enforce one row per user
-    const existing = await this.repo.findOne({ where: { userId: dto.userId } });
+    const existing = await this.repo.findOne({ where: { companyId: dto.companyId } });
     if (existing) {
       throw new ConflictException('Configuration already exists for this user');
     }
@@ -26,37 +25,37 @@ export class ConfigurationService {
     return this.repo.save(entity);
   }
 
-  async getByUserId(userId: number): Promise<Configuration> {
-    const config = await this.repo.findOne({ where: { userId } });
+  async getByCompanyId(companyId: number): Promise<Configuration> {
+    const config = await this.repo.findOne({ where: { companyId } });
     if (!config) throw new NotFoundException('Configuration not found');
     return config;
   }
 
   async upsertByUserId(
-    userId: number,
+    companyId: number,
     dto: UpdateConfigurationDto | CreateConfigurationDto,
   ): Promise<Configuration> {
-    const existing = await this.repo.findOne({ where: { userId } });
+    const existing = await this.repo.findOne({ where: { companyId } });
     if (!existing) {
       // allow create via upsert
-      const created = this.repo.create({ userId, ...dto });
+      const created = this.repo.create({ companyId, ...dto });
       return this.repo.save(created);
     }
     const updated = this.repo.merge(existing, dto);
     return this.repo.save(updated);
   }
 
-  async updateByUserId(
+  async updateByCompanyId(
     userId: number,
     dto: UpdateConfigurationDto,
   ): Promise<Configuration> {
-    const config = await this.getByUserId(userId);
+    const config = await this.getByCompanyId(userId);
     const merged = this.repo.merge(config, dto);
     return this.repo.save(merged);
   }
 
-  async deleteByUserId(userId: number): Promise<{ deleted: true }> {
-    const res = await this.repo.delete({ userId });
+  async deleteByCompanyId(companyId: number): Promise<{ deleted: true }> {
+    const res = await this.repo.delete({ companyId });
     if (res.affected === 0)
       throw new NotFoundException('Configuration not found');
     return { deleted: true };

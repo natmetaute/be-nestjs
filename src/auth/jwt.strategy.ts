@@ -6,6 +6,8 @@ import { jwtConstants } from './constants';
 export interface JwtPayload {
   sub: number;
   email: string;
+  companyId: number;
+  role: string;
 }
 
 @Injectable()
@@ -21,6 +23,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       userId: payload.sub,
       email: payload.email,
+      role: payload.role,
+      companyId: payload.companyId,
     };
   }
 }

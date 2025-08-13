@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { validate } from 'class-validator';
+import { plainToInstance } from 'class-transformer';
 import {
   Transactions,
   TransactionType,
   TransactionCategory,
 } from './transactions.entity';
 import { SummaryDto } from './dto/summary.dto';
+import { CreateTransactionDto } from './dto/create-transaction.dto';
 import {
   SummaryResult,
   NumericSummaryKey,
@@ -15,6 +18,7 @@ import { TargetService } from '../target/target.service';
 import * as dayjs from 'dayjs';
 import * as isoWeek from 'dayjs/plugin/isoWeek';
 import * as weekOfYear from 'dayjs/plugin/weekOfYear';
+import { Company } from '../company/company.entity';
 
 // Extend the plugins
 dayjs.extend(isoWeek as any);
@@ -43,6 +47,8 @@ export class TransactionsService {
     @InjectRepository(Transactions)
     private readonly repo: Repository<Transactions>,
     private readonly targetService: TargetService,
+    @InjectRepository(Company)
+    private companyRepository: Repository<Company>,
   ) {}
 
   private getMonthIndexFromLabel(label: string): number | undefined {
@@ -55,28 +61,12 @@ export class TransactionsService {
     }
   }
 
-  private getWeeksInMonth(year: number, month: number): number {
-    const firstDay = dayjs(new Date(year, month - 1, 1));
-    const lastDay = firstDay.endOf('month');
-
-    let current = firstDay.startOf('week');
-    const end = lastDay.endOf('week');
-
-    let count = 0;
-    while (current.isBefore(end)) {
-      count++;
-      current = current.add(1, 'week');
-    }
-
-    return count;
-  }
-
-  async getSummary({
-    year,
-    month,
-    quarter,
-  }: SummaryDto): Promise<SummaryResult> {
+  async getSummary(
+    { year, month, quarter }: SummaryDto,
+    companyId: number,
+  ): Promise<SummaryResult> {
     const qb = this.repo.createQueryBuilder('t');
+    qb.where('t.companyId = :companyId', { companyId });
 
     if (year) {
       qb.andWhere('YEAR(t.createdAt) = :year', { year });
@@ -98,10 +88,10 @@ export class TransactionsService {
     if (!year) {
       throw new Error('Year is required to get targets');
     }
-    const targets = await this.targetService.getTargetsForYear(year);
+    const targets = await this.targetService.getTargetsForYear(year, companyId);
     const targetMap = new Map<number, number>();
     targets.forEach((t) => {
-      if (t.month && t.amount) {
+      if (t.month && t.amount && t.companyId === companyId) {
         targetMap.set(t.month, t.amount);
       }
     });
@@ -132,10 +122,14 @@ export class TransactionsService {
         // Get the first transaction date of the selected month
         const firstTx = await this.repo
           .createQueryBuilder('t')
-          .where('YEAR(t.createdAt) = :year AND MONTH(t.createdAt) = :month', {
-            year,
-            month,
-          })
+          .where(
+            'YEAR(t.createdAt) = :year AND MONTH(t.createdAt) = :month AND t.companyId = :companyId',
+            {
+              year,
+              month,
+              companyId,
+            },
+          )
           .orderBy('t.createdAt', 'ASC')
           .getOne();
 
@@ -149,10 +143,14 @@ export class TransactionsService {
 
           const prevData = await this.repo
             .createQueryBuilder('t')
-            .where('t.createdAt BETWEEN :start AND :end', {
-              start: previousWeekStart,
-              end: previousWeekEnd,
-            })
+            .where(
+              't.createdAt BETWEEN :start AND :end AND t.companyId = :companyId',
+              {
+                start: previousWeekStart,
+                end: previousWeekEnd,
+                companyId,
+              },
+            )
             .getMany();
 
           const prevSummary = this.buildSummary(prevData, 'Previous Week');
@@ -175,10 +173,11 @@ export class TransactionsService {
         const prevData = await this.repo
           .createQueryBuilder('t')
           .where(
-            'YEAR(t.createdAt) = :prevYear AND MONTH(t.createdAt) = :prevMonth',
+            'YEAR(t.createdAt) = :prevYear AND MONTH(t.createdAt) = :prevMonth AND t.companyId = :companyId',
             {
               prevYear,
               prevMonth,
+              companyId,
             },
           )
           .getMany();
@@ -338,5 +337,85 @@ export class TransactionsService {
     }
 
     return 'All Time';
+  }
+
+  async createOrUpdateTransactions(
+    transactions: CreateTransactionDto[],
+    companyId: number,
+  ): Promise<{
+    insertedCount: number;
+    updatedCount: number;
+    updatedRecords: Transactions[];
+    timeMs: number;
+  }> {
+    const start = Date.now();
+
+    const company = await this.companyRepository.findOne({
+      where: { id: companyId },
+    });
+    if (!company) {
+      throw new Error(`Company with ID ${companyId} not found.`);
+    }
+
+    const errors: { row: number; errors: string[] }[] = [];
+
+    for (let i = 0; i < transactions.length; i++) {
+      const transaction = transactions[i];
+      const txInstance = plainToInstance(CreateTransactionDto, transaction);
+      const validationErrors = await validate(txInstance);
+      if (validationErrors.length > 0) {
+        errors.push({
+          row: i + 1,
+          errors: validationErrors.map((ve) =>
+            Object.values(ve.constraints || {}).join(', '),
+          ),
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new Error(`Validation failed: ${JSON.stringify(errors)}`);
+    }
+
+    const inserted: Transactions[] = [];
+    const updated: Transactions[] = [];
+
+    for (const transaction of transactions) {
+      if (transaction.id) {
+        const existing = await this.repo.findOne({
+          where: { externalId: transaction.id, companyId },
+        });
+        if (existing) {
+          existing.amount = transaction.amount;
+          existing.createdAt = new Date(transaction.createdAt);
+          existing.type = transaction.type;
+          existing.category = transaction.category;
+          await this.repo.save(existing);
+          updated.push(existing);
+          continue;
+        }
+      }
+
+      const entity = this.repo.create({
+        externalId: transaction.id,
+        amount: transaction.amount,
+        createdAt: new Date(transaction.createdAt),
+        type: transaction.type,
+        category: transaction.category,
+        company,
+        companyId,
+      });
+      const saved = await this.repo.save(entity);
+      inserted.push(saved);
+    }
+
+    const end = Date.now();
+
+    return {
+      insertedCount: inserted.length,
+      updatedCount: updated.length,
+      updatedRecords: updated,
+      timeMs: end - start,
+    };
   }
 }

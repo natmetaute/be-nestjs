@@ -1,15 +1,19 @@
+import { Company } from 'src/company/company.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 
 export enum UserRole {
   Admin = 'Admin',
   BDM = 'BDM',
   User = 'User',
+  Viewer = 'Viewer',
 }
 
 export enum UserStatus {
@@ -55,4 +59,11 @@ export class User {
 
   @UpdateDateColumn()
   lastUpdatedDate: Date;
+
+  @ManyToOne(() => Company, (company) => company.users)
+  @JoinColumn({ name: 'companyId' })
+  company: Company;
+
+  @Column({ nullable: false })
+  companyId: number;
 }

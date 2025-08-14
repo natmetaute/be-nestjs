@@ -27,7 +27,7 @@ export class Transactions {
   @Column({ nullable: true, unique: true })
   externalId?: string;
 
-  @Column('decimal', { precision: 12, scale: 2 })
+  @Column('decimal', { precision: 24, scale: 2 })
   amount: number;
 
   @CreateDateColumn()

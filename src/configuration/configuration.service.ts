@@ -17,7 +17,9 @@ export class ConfigurationService {
   ) {}
 
   async create(dto: CreateConfigurationDto): Promise<Configuration> {
-    const existing = await this.repo.findOne({ where: { companyId: dto.companyId } });
+    const existing = await this.repo.findOne({
+      where: { companyId: dto.companyId },
+    });
     if (existing) {
       throw new ConflictException('Configuration already exists for this user');
     }

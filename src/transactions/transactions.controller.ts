@@ -7,6 +7,7 @@ import {
   Body,
   Param,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { SummaryDto } from './dto/summary.dto';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -18,7 +19,7 @@ import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 interface RowValidationError {
   row: number;
-  errors: string[];
+  errors: Record<string, string>;
 }
 
 export async function validateTransactions(
@@ -43,9 +44,17 @@ export async function validateTransactions(
     if (rowErrors.length > 0) {
       errors.push({
         row: i + 1,
-        errors: rowErrors
-          .map((err) => Object.values(err.constraints || {}))
-          .flat(),
+        errors: rowErrors.reduce(
+          (acc, err) => {
+            Object.entries(err.constraints || {}).forEach(
+              ([field, message]) => {
+                acc[err.property] = message; // key is the field name
+              },
+            );
+            return acc;
+          },
+          {} as Record<string, string>,
+        ),
       });
     } else {
       valid.push(transaction);
@@ -65,38 +74,51 @@ export class TransactionsController {
     return this.transactionsService.getSummary(dto, companyId);
   }
 
+  @Get()
+  findAllWithFilters(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('search') search?: string,
+    @Query('companyId') companyId?: number,
+  ) {
+    return this.transactionsService.findAllWithFilters(
+      Number(page),
+      Number(limit),
+      search,
+      companyId,
+    );
+  }
+
   @Post('upload/:companyId')
   async uploadTransactions(
     @Param('companyId') companyId: number,
     @Body() transactions: CreateTransactionDto[],
   ) {
-    try {
-      const { errors } = await validateTransactions(transactions, companyId);
+    const { errors, valid } = await validateTransactions(
+      transactions,
+      companyId,
+    );
 
-      if (errors.length > 0) {
-        return {
-          message: 'Validation failed',
-          errors,
-        };
-      }
-
-      const startTime = Date.now();
-      const summary = await this.transactionsService.createOrUpdateTransactions(
-        transactions,
-        companyId,
-      );
-      const endTime = Date.now();
-
-      return {
-        message: 'Transactions processed successfully',
-        insertedCount: summary.insertedCount,
-        updatedCount: summary.updatedCount,
-        updatedRecords: summary.updatedRecords,
-        timeMs: endTime - startTime,
-      };
-    } catch (error) {
-      console.error('Error uploading transactions:', error);
-      throw new InternalServerErrorException('Failed to upload transactions');
+    if (errors.length > 0) {
+      throw new BadRequestException({
+        message: 'Validation failed',
+        errors,
+      });
     }
+
+    const startTime = Date.now();
+    const summary = await this.transactionsService.createOrUpdateTransactions(
+      valid,
+      companyId,
+    );
+    const endTime = Date.now();
+
+    return {
+      message: 'Transactions processed successfully',
+      insertedCount: summary.insertedCount,
+      updatedCount: summary.updatedCount,
+      updatedRecords: summary.updatedRecords,
+      timeMs: endTime - startTime,
+    };
   }
 }

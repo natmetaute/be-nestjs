@@ -39,6 +39,7 @@ export class CompanyService {
   findAll() {
     return this.repo.find();
   }
+
   async findAllWithFilters(
     page = 1,
     limit = 10,

@@ -15,6 +15,7 @@ async function bootstrap() {
       whitelist: true, // strip unknown properties
       forbidNonWhitelisted: true, // 400 if extra fields are sent (e.g., "username")
       transform: true, // auto-transform primitives (e.g., "id" param to number)
+      transformOptions: { enableImplicitConversion: true },
     }),
   );
 

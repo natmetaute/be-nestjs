@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { validate } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import {
@@ -59,6 +59,47 @@ export class TransactionsService {
     } catch {
       return undefined;
     }
+  }
+
+  async findAllWithFilters(
+    page = 1,
+    limit = 10,
+    search?: string,
+    companyId?: number,
+  ): Promise<{ data: Transactions[]; total: number }> {
+    const where = search
+      ? [
+          { externalId: Like(`%${search}%`), companyId },
+          { createdAt: Like(`%${search}%`), companyId },
+        ]
+      : [{ companyId }];
+
+    const queryBuilder = this.repo
+      .createQueryBuilder('transactions')
+      .where(where);
+
+    const result = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getRawAndEntities();
+
+    const entities = result.entities;
+    const raw = result.raw;
+
+    if (!Array.isArray(entities) || !Array.isArray(raw)) {
+      throw new Error('Expected entities and raw data to be arrays.');
+    }
+
+    const mappedData = entities.map((transactions) => ({
+      ...transactions,
+    }));
+
+    const total = await this.repo
+      .createQueryBuilder('transactions')
+      .where(where)
+      .getCount();
+
+    return { data: mappedData, total };
   }
 
   async getSummary(
@@ -374,7 +415,15 @@ export class TransactionsService {
     }
 
     if (errors.length > 0) {
-      throw new Error(`Validation failed: ${JSON.stringify(errors)}`);
+      const formattedErrors = errors.map((err) => ({
+        row: err.row,
+        errors: err.errors,
+      }));
+
+      throw new BadRequestException({
+        message: 'Validation failed',
+        errors: formattedErrors,
+      });
     }
 
     const inserted: Transactions[] = [];

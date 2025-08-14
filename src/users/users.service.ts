@@ -19,50 +19,49 @@ export class UsersService {
     return this.usersRepo.find();
   }
 
-async findAllWithFilters(
-  page = 1,
-  limit = 10,
-  search?: string,
-): Promise<{ data: User[]; total: number }> {
-  const where = search
-  ? [
-      { firstName: Like(`%${search}%`) },
-      { lastName: Like(`%${search}%`) }
-    ]
-  : [];
+  async findAllWithFilters(
+    page = 1,
+    limit = 10,
+    search?: string,
+  ): Promise<{ data: User[]; total: number }> {
+    const where = search
+      ? [{ firstName: Like(`%${search}%`) }, { lastName: Like(`%${search}%`) }]
+      : [];
 
-    const queryBuilder = this.usersRepo.createQueryBuilder('users')                
-    .where(where);   
+    const queryBuilder = this.usersRepo
+      .createQueryBuilder('users')
+      .where(where);
 
     const result = await queryBuilder
-    .skip((page - 1) * limit)  
-    .take(limit)               
-    .getRawAndEntities();    
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getRawAndEntities();
 
-  const entities = result.entities; 
-  const raw = result.raw;  
+    const entities = result.entities;
+    const raw = result.raw;
 
-  if (!Array.isArray(entities) || !Array.isArray(raw)) {
-    throw new Error("Expected entities and raw data to be arrays.");
+    if (!Array.isArray(entities) || !Array.isArray(raw)) {
+      throw new Error('Expected entities and raw data to be arrays.');
+    }
+
+    const mappedData = entities.map((users) => ({
+      ...users,
+    }));
+
+    const total = await this.usersRepo
+      .createQueryBuilder('users')
+      .where(where)
+      .getCount();
+
+    return { data: mappedData, total };
   }
 
-  const mappedData = entities.map((users) => ({
-    ...users,                        
-  }));
-
-    const total = await this.usersRepo.createQueryBuilder('users')
-    .where(where)  
-    .getCount();
-
-  return { data: mappedData , total};
-}
-
-    async findAllByCompany(companyId: number): Promise<User[]> {
+  async findAllByCompany(companyId: number): Promise<User[]> {
     return this.usersRepo
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.company', 'company') 
-      .where('user.companyId = :companyId', { companyId }) 
-      .getMany(); 
+      .leftJoinAndSelect('user.company', 'company')
+      .where('user.companyId = :companyId', { companyId })
+      .getMany();
   }
 
   async findById(id: number) {

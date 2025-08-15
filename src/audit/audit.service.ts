@@ -37,8 +37,8 @@ export class AuditService {
       action: params.action,
       entity: params.entity,
       entityId: String(params.entityId),
-      changes: params.changes ? JSON.stringify(params.changes) : null,
-      userEmail: params.userEmail ?? null,
+      changes: params.changes ? JSON.stringify(params.changes) : undefined,
+      userEmail: params.userEmail ?? undefined,
     });
     await this.auditRepo.save(log);
   }

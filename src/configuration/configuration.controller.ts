@@ -21,7 +21,9 @@ export class ConfigurationController {
   constructor(private readonly service: ConfigurationService) {}
 
   @Get()
-  get(@Param('companyId', ParseIntPipe) companyId: number): Promise<Configuration> {
+  get(
+    @Param('companyId', ParseIntPipe) companyId: number,
+  ): Promise<Configuration> {
     return this.service.getByCompanyId(companyId);
   }
 

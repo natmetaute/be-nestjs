@@ -2,21 +2,34 @@ import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
-  Unique,
+  CreateDateColumn,
+  UpdateDateColumn,
+  OneToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Company } from '../company/company.entity';
 
 @Entity({ name: 'configuration' })
-@Unique('UQ_configuration_companyId', ['companyId'])
 export class Configuration {
-  @PrimaryGeneratedColumn()
-  id!: number;
+  @PrimaryGeneratedColumn({ type: 'integer' })
+  id: number;
 
-  @Column({ type: 'varchar', length: 10 })
+  @Column({ type: 'varchar' })
   currency!: string;
 
-  @Column({ type: 'varchar', length: 10 })
+  @Column({ type: 'varchar' })
   language!: string;
 
-  @Column({ unique: true }) // one config per company
+  @OneToOne(() => Company, (company) => company.transactions)
+  @JoinColumn({ name: 'companyId' })
+  company: Company;
+
+  @Column({ type: 'integer', nullable: false }) // Explicitly set type for PostgreSQL
   companyId: number;
+
+  @CreateDateColumn({ type: 'timestamptz', default: () => 'now()' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz', default: () => 'now()' })
+  updatedAt: Date;
 }

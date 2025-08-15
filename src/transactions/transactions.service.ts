@@ -107,21 +107,21 @@ export class TransactionsService {
     companyId: number,
   ): Promise<SummaryResult> {
     const qb = this.repo.createQueryBuilder('t');
-    qb.where('t.companyId = :companyId', { companyId });
+    qb.where('t."companyId" = :companyId', { companyId });
 
     if (year) {
-      qb.andWhere('YEAR(t.createdAt) = :year', { year });
+      qb.andWhere('EXTRACT(YEAR FROM t."createdAt") = :year', { year });
     }
 
     if (month) {
-      qb.andWhere('MONTH(t.createdAt) = :month', { month });
+      qb.andWhere('EXTRACT(MONTH FROM t."createdAt") = :month', { month });
     } else if (quarter) {
       const fromMonth = (quarter - 1) * 3 + 1;
       const toMonth = fromMonth + 2;
-      qb.andWhere('MONTH(t.createdAt) BETWEEN :fromMonth AND :toMonth', {
-        fromMonth,
-        toMonth,
-      });
+      qb.andWhere(
+        'EXTRACT(MONTH FROM t."createdAt") BETWEEN :fromMonth AND :toMonth',
+        { fromMonth, toMonth },
+      );
     }
 
     const data = await qb.getMany();
@@ -160,18 +160,14 @@ export class TransactionsService {
 
     if (year) {
       if (month) {
-        // Get the first transaction date of the selected month
+        // first transaction of the selected month
         const firstTx = await this.repo
           .createQueryBuilder('t')
           .where(
-            'YEAR(t.createdAt) = :year AND MONTH(t.createdAt) = :month AND t.companyId = :companyId',
-            {
-              year,
-              month,
-              companyId,
-            },
+            'EXTRACT(YEAR FROM t."createdAt") = :year AND EXTRACT(MONTH FROM t."createdAt") = :month AND t."companyId" = :companyId',
+            { year, month, companyId },
           )
-          .orderBy('t.createdAt', 'ASC')
+          .orderBy('t."createdAt"', 'ASC')
           .getOne();
 
         if (firstTx) {
@@ -185,12 +181,8 @@ export class TransactionsService {
           const prevData = await this.repo
             .createQueryBuilder('t')
             .where(
-              't.createdAt BETWEEN :start AND :end AND t.companyId = :companyId',
-              {
-                start: previousWeekStart,
-                end: previousWeekEnd,
-                companyId,
-              },
+              't."createdAt" BETWEEN :start AND :end AND t."companyId" = :companyId',
+              { start: previousWeekStart, end: previousWeekEnd, companyId },
             )
             .getMany();
 
@@ -214,12 +206,8 @@ export class TransactionsService {
         const prevData = await this.repo
           .createQueryBuilder('t')
           .where(
-            'YEAR(t.createdAt) = :prevYear AND MONTH(t.createdAt) = :prevMonth AND t.companyId = :companyId',
-            {
-              prevYear,
-              prevMonth,
-              companyId,
-            },
+            'EXTRACT(YEAR FROM t."createdAt") = :prevYear AND EXTRACT(MONTH FROM t."createdAt") = :prevMonth AND t."companyId" = :companyId',
+            { prevYear, prevMonth, companyId },
           )
           .getMany();
 
@@ -228,17 +216,24 @@ export class TransactionsService {
       }
     }
 
-    // Start/end year for context
     const range = await this.repo
       .createQueryBuilder('t')
       .select([
-        'MIN(YEAR(t.createdAt)) as min',
-        'MAX(YEAR(t.createdAt)) as max',
+        `MIN(EXTRACT(YEAR FROM t."createdAt")) AS min`,
+        `MAX(EXTRACT(YEAR FROM t."createdAt")) AS max`,
       ])
+      .where(`t."companyId" = :companyId`, { companyId })
       .getRawOne<{ min: number | null; max: number | null }>();
 
-    const startYear = range?.min ?? undefined;
-    const endYear = range?.max ?? undefined;
+    // EXTRACT returns numeric; coerce carefully and handle "no rows"
+    const startYear =
+      range?.min === null || range?.min === undefined
+        ? undefined
+        : Number(range.min);
+    const endYear =
+      range?.max === null || range?.max === undefined
+        ? undefined
+        : Number(range.max);
 
     // Group and build details
     const grouped = month ? this.groupByWeek(data) : this.groupByMonth(data);
@@ -246,14 +241,14 @@ export class TransactionsService {
     let details: SummaryResult[] = [];
 
     if (month) {
-      const weekCount = Object.keys(grouped).length; // <-- actual weeks with data
+      const weekCount = Object.keys(grouped).length;
       const perWeekTarget = weekCount > 0 ? totalTarget / weekCount : 0;
 
-      details = Object.entries(grouped).map(([label, groupData]) => {
-        return this.buildSummary(groupData, label, perWeekTarget);
-      });
+      details = Object.entries(grouped).map(([label, groupData]) =>
+        this.buildSummary(groupData, label, perWeekTarget),
+      );
     } else {
-      // Grouping by month (for quarter or year)
+      // quarter or year → by month
       details = await Promise.all(
         Object.entries(grouped).map(async ([label, groupData]) => {
           const monthIndex = this.getMonthIndexFromLabel(label);
@@ -265,7 +260,7 @@ export class TransactionsService {
       );
     }
 
-    // Build final total summary
+    // Final total summary
     const total = this.buildSummary(
       data,
       this.getPeriodLabel(year, month, quarter),

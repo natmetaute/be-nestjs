@@ -5,6 +5,7 @@ import {
   CreateDateColumn,
   ManyToOne,
   JoinColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Company } from '../company/company.entity';
 
@@ -21,17 +22,14 @@ export enum TransactionCategory {
 
 @Entity()
 export class Transactions {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'integer' }) // Explicitly set type for PostgreSQL
   id: number;
 
-  @Column({ nullable: true, unique: true })
+  @Column({ type: 'varchar', length: 255, nullable: true, unique: true }) // Specify varchar and length
   externalId?: string;
 
-  @Column('decimal', { precision: 24, scale: 2 })
+  @Column('numeric', { precision: 24, scale: 2 }) // Use 'numeric' for decimal values in PostgreSQL
   amount: number;
-
-  @CreateDateColumn()
-  createdAt: Date;
 
   @Column({
     type: 'enum',
@@ -49,6 +47,12 @@ export class Transactions {
   @JoinColumn({ name: 'companyId' })
   company: Company;
 
-  @Column({ nullable: false }) // one config per company
+  @Column({ type: 'integer', nullable: false }) // Explicitly set type for PostgreSQL
   companyId: number;
+
+  @CreateDateColumn({ type: 'timestamptz', default: () => 'now()' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz', default: () => 'now()' })
+  updatedAt: Date;
 }

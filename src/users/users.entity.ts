@@ -1,12 +1,8 @@
-import { Company } from 'src/company/company.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
 } from 'typeorm';
 
 export enum UserRole {
@@ -25,13 +21,13 @@ export enum UserStatus {
 
 @Entity()
 export class User {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'integer' })
   id: number;
 
   @Column({ type: 'varchar', length: 255 })
   password: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   email: string;
 
   @Column()
@@ -54,16 +50,9 @@ export class User {
   })
   status: UserStatus;
 
-  @ManyToOne(() => Company, (company) => company.users)
-  @JoinColumn({ name: 'companyId' })
-  company: Company;
-
-  @Column({ nullable: false })
-  companyId: number;
-
-  @CreateDateColumn({ type: 'timestamptz', default: () => 'now()' })
+  @CreateDateColumn({ type: 'timestamp' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', default: () => 'now()' })
-  updatedAt: Date;
+  @Column({ type: 'integer' })
+  companyId: number;
 }

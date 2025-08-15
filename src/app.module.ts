@@ -12,22 +12,28 @@ import { CompanyModule } from './company/company.module';
 import { DataSource } from 'typeorm';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({
+      isGlobal: true, // loads .env automatically at startup
+      // envFilePath: '.env',      // optional; default is .env in project root
+    }),
     TypeOrmModule.forRoot({
-      type: 'mysql',
-      host: 'localhost',
-      port: 3306,
-      username: 'mtech',
-      password: 'mtech6928',
-      database: 'mtech',
+      type: 'postgres',
+      host: process.env.DB_HOST,
+      port: 5432,
+      username: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
-      synchronize: true, // disable in production
+      autoLoadEntities: true,
+      synchronize: true, // Use with caution in production
     }),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
-      serveRoot: '/public', 
+      serveRoot: '/public',
     }),
     UsersModule,
     AuthModule,

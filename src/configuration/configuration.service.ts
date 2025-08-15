@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DeepPartial } from 'typeorm';
 import { Configuration } from './configuration.entity';
 import { CreateConfigurationDto } from './dto/create-configuration.dto';
 import { UpdateConfigurationDto } from './dto/update-configuration.dto';
@@ -43,8 +43,8 @@ export class ConfigurationService {
       const created = this.repo.create({ companyId, ...dto });
       return this.repo.save(created);
     }
-    const updated = this.repo.merge(existing, dto);
-    return this.repo.save(updated);
+    const updated: DeepPartial<Configuration> = { companyId, ...dto };
+    return this.repo.save({ ...existing, ...updated });
   }
 
   async updateByCompanyId(
@@ -52,7 +52,7 @@ export class ConfigurationService {
     dto: UpdateConfigurationDto,
   ): Promise<Configuration> {
     const config = await this.getByCompanyId(userId);
-    const merged = this.repo.merge(config, dto);
+    const merged = this.repo.merge(config, dto as DeepPartial<Configuration>);
     return this.repo.save(merged);
   }
 

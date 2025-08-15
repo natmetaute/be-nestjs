@@ -119,7 +119,7 @@ export class AuditSubscriber implements EntitySubscriberInterface<object> {
       action: AuditAction.DELETE,
       entity: event.metadata.name,
       entityId: entityId ?? '(unknown)',
-      changes: null, // no diff for deletes
+      changes: undefined, // no diff for deletes
     });
 
     await repo.save(log);

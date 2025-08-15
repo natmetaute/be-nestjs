@@ -32,14 +32,14 @@ export class AuditLog {
   entityId!: string;
 
   @CreateDateColumn({
-    type: 'datetime',
+    type: 'timestamptz',
     precision: 6,
-    default: () => 'CURRENT_TIMESTAMP(6)',
+    default: () => 'CURRENT_TIMESTAMP',
   })
   timestamp!: Date;
 
-  @Column({ type: 'longtext', nullable: true })
-  changes!: string | null;
+  @Column({ type: 'text' })
+  changes!: string;
 
   // ✅ Make the type explicit so TypeORM doesn’t infer "Object"
   @Column({ type: 'varchar', length: 191, nullable: true })

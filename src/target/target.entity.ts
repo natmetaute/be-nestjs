@@ -4,40 +4,38 @@ import {
   Column,
   ManyToOne,
   JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
 import { Company } from '../company/company.entity';
 
 @Entity()
 export class Target {
-  @PrimaryGeneratedColumn()
+  @PrimaryGeneratedColumn({ type: 'integer' })
   id: number;
 
-  @Column()
+  @Column({ type: 'numeric', precision: 24, scale: 2 })
+  amount: number;
+
+  @Column({ type: 'integer' })
   year: number;
 
-  @Column({ nullable: true })
-  month?: number;
+  @Column({ type: 'integer', nullable: true })
+  month: number;
 
-  @Column({ nullable: true })
-  quarter?: number;
+  @Column({ type: 'integer', nullable: true })
+  quarter: number;
 
-  @Column('decimal', { precision: 50, scale: 2 })
-  amount: number;
+  @Column({ type: 'integer' })
+  companyId: number;
 
   @ManyToOne(() => Company, (company) => company.targets)
   @JoinColumn({ name: 'companyId' })
   company: Company;
 
-  @Column({ nullable: false })
-  companyId: number;
-
-  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  @CreateDateColumn({ type: 'timestamptz', default: () => 'now()' })
   createdAt: Date;
 
-  @Column({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-    onUpdate: 'CURRENT_TIMESTAMP',
-  })
+  @UpdateDateColumn({ type: 'timestamptz', default: () => 'now()' })
   updatedAt: Date;
 }

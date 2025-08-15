@@ -6,7 +6,6 @@ import {
   Post,
   Body,
   Param,
-  InternalServerErrorException,
   BadRequestException,
 } from '@nestjs/common';
 import { SummaryDto } from './dto/summary.dto';

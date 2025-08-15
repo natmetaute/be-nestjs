@@ -8,6 +8,7 @@ import {
   Param,
   NotFoundException,
   BadRequestException,
+  Query,
 } from '@nestjs/common';
 import { TargetService } from './target.service';
 import { Target } from './target.entity';
@@ -78,9 +79,24 @@ export async function validateTargets(
 export class TargetController {
   constructor(private readonly service: TargetService) {}
 
-  @Get()
+  @Get('summary')
   findAll() {
     return this.service.findAll();
+  }
+
+  @Get()
+  findAllWithFilters(
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+    @Query('search') search?: string,
+    @Query('companyId') companyId?: number,
+  ) {
+    return this.service.findAllWithFilters(
+      Number(page),
+      Number(limit),
+      search,
+      companyId,
+    );
   }
 
   @Get(':id')

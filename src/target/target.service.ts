@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import { CreateTargetDto } from './dto/create-target.dto';
 import { Target } from './target.entity';
 import { Company } from '../company/company.entity';
@@ -160,5 +160,41 @@ export class TargetService {
       updatedRecords: updated,
       timeMs: end - start,
     };
+  }
+
+  async findAllWithFilters(
+    page = 1,
+    limit = 10,
+    search?: string,
+    companyId?: number,
+  ): Promise<{ data: Target[]; total: number }> {
+    const where = search
+      ? [{ year: Like(`%${search}%`), companyId }]
+      : [{ companyId }];
+
+    const queryBuilder = this.repo.createQueryBuilder('targets').where(where);
+
+    const result = await queryBuilder
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getRawAndEntities();
+
+    const entities = result.entities;
+    const raw = result.raw;
+
+    if (!Array.isArray(entities) || !Array.isArray(raw)) {
+      throw new Error('Expected entities and raw data to be arrays.');
+    }
+
+    const mappedData = entities.map((targets) => ({
+      ...targets,
+    }));
+
+    const total = await this.repo
+      .createQueryBuilder('targets')
+      .where(where)
+      .getCount();
+
+    return { data: mappedData, total };
   }
 }
